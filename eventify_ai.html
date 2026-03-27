@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Eventify AI – Smart Event Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: #e8e5de;
+    --text: #1a1915;
+    --muted: #888580;
+    --accent: #2d5a27;
+    --accent-light: #eef4ed;
+    --accent2: #c8a951;
+    --error: #c0392b;
+    --error-light: #fdf0ef;
+    --radius: 14px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);min-height:100vh;}
+
+  /* HEADER */
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 40px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+  .logo-mark{width:38px;height:38px;background:linear-gradient(135deg,#2d5a27,#4a8c42);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+  .logo-text{font-family:'DM Serif Display',serif;font-size:1.35rem;letter-spacing:-0.3px;}
+  .logo-sub{font-size:0.7rem;color:var(--muted);font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-top:-2px;}
+  .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .tag{background:var(--accent-light);color:var(--accent);font-size:0.72rem;font-weight:600;letter-spacing:0.5px;padding:4px 10px;border-radius:20px;}
+  .qr-btn{background:var(--text);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;}
+  .qr-btn:hover{background:#333;}
+
+  /* QR MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:white;border-radius:20px;padding:36px;max-width:340px;width:90%;text-align:center;animation:fadeUp 0.3s ease;}
+  .modal h2{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:6px;}
+  .modal p{font-size:0.83rem;color:var(--muted);margin-bottom:22px;}
+  #qrcode{display:flex;justify-content:center;margin-bottom:18px;}
+  #qrcode canvas,#qrcode img{border-radius:10px;border:3px solid var(--accent-light);}
+  .modal-url{font-size:0.72rem;color:var(--muted);word-break:break-all;margin-bottom:18px;background:#f7f6f3;padding:8px 12px;border-radius:8px;}
+  .modal-close{background:var(--accent);color:white;border:none;border-radius:10px;padding:10px 24px;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;}
+
+  /* MAIN */
+  main{max-width:860px;margin:0 auto;padding:40px 20px 80px;}
+  h1{font-family:'DM Serif Display',serif;font-size:2.1rem;line-height:1.2;margin-bottom:6px;}
+  .subtitle{color:var(--muted);font-size:0.95rem;margin-bottom:36px;}
+
+  /* STEPS */
+  .steps{display:flex;gap:0;margin-bottom:36px;flex-wrap:wrap;gap:8px;}
+  .step{display:flex;align-items:center;gap:7px;font-size:0.78rem;font-weight:500;color:var(--muted);padding-right:20px;position:relative;}
+  .step:not(:last-child)::after{content:'';position:absolute;right:4px;top:50%;transform:translateY(-50%);width:12px;height:1px;background:var(--border);}
+  .step.active{color:var(--accent);}
+  .step.done{color:var(--accent2);}
+  .step-num{width:22px;height:22px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;}
+  .step.active .step-num{background:var(--accent);color:white;}
+  .step.done .step-num{background:var(--accent2);color:white;}
+
+  /* CARD */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:20px;box-shadow:var(--shadow);animation:fadeUp 0.35s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+  .card-title{font-family:'DM Serif Display',serif;font-size:1.2rem;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+  .card-title .icon{width:32px;height:32px;background:var(--accent-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+
+  /* EVENT GRID */
+  .event-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  .event-card{border:2px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:14px;}
+  .event-card:hover{border-color:var(--accent);background:var(--accent-light);}
+  .event-card.selected{border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 3px rgba(45,90,39,0.1);}
+  .event-card .ev-icon{font-size:1.6rem;}
+  .event-card .ev-name{font-weight:600;font-size:0.92rem;}
+  .event-card .ev-desc{font-size:0.78rem;color:var(--muted);margin-top:2px;}
+
+  /* FORM */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  label{font-size:0.82rem;font-weight:600;color:var(--text);}
+  input,select,textarea{border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--text);background:var(--surface);transition:border-color 0.2s,box-shadow 0.2s;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,39,0.08);}
+  input.error,select.error{border-color:var(--error);}
+  .err-msg{font-size:0.75rem;color:var(--error);margin-top:4px;}
+  textarea{resize:vertical;min-height:80px;}
+  select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888580' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+
+  /* LOCATION ROW */
+  .loc-row{display:flex;gap:8px;align-items:flex-start;}
+  .loc-row input{flex:1;}
+  .loc-detect-btn{background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:10px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;display:flex;align-items:center;gap:6px;}
+  .loc-detect-btn:hover{background:var(--accent);color:white;}
+  .loc-detect-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .loc-status{font-size:0.75rem;margin-top:4px;}
+  .loc-status.ok{color:var(--accent);}
+  .loc-status.fail{color:var(--error);}
+
+  /* RANGE */
+  .range-wrap{display:flex;align-items:center;gap:12px;}
+  input[type=range]{flex:1;padding:0;border:none;box-shadow:none;accent-color:var(--accent);}
+  .range-val{background:var(--accent-light);color:var(--accent);font-weight:600;font-size:0.88rem;padding:4px 12px;border-radius:20px;min-width:60px;text-align:center;}
+
+  /* DECORATION GRID */
+  .decor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
+  .decor-card{border:2px solid var(--border);border-radius:12px;padding:14px 10px;cursor:pointer;transition:all 0.2s;text-align:center;}
+  .decor-card:hover{border-color:var(--accent);background:var(--accent-light);}
+  .decor-card.selected{border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 3px rgba(45,90,39,0.1);}
+  .decor-card .dc-icon{font-size:1.8rem;margin-bottom:6px;}
+  .decor-card .dc-name{font-weight:600;font-size:0.82rem;}
+  .decor-card .dc-desc{font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.4;}
+  .decor-card .dc-price{font-size:0.75rem;color:var(--accent2);font-weight:600;margin-top:5px;}
+
+  /* VENUE CHIPS */
+  .venue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
+  .venue-chip{border:1.5px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:all 0.2s;font-size:0.82rem;}
+  .venue-chip:hover{border-color:var(--accent);}
+  .venue-chip.selected{border-color:var(--accent);background:var(--accent-light);}
+  .venue-chip .vc-name{font-weight:600;}
+  .venue-chip .vc-cap{color:var(--muted);font-size:0.75rem;margin-top:2px;}
+  .venue-chip .vc-price{color:var(--accent2);font-weight:600;font-size:0.78rem;margin-top:4px;}
+
+  /* BUTTONS */
+  .btn{padding:12px 26px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;}
+  .btn-primary{background:var(--accent);color:white;}
+  .btn-primary:hover{background:#234a1e;transform:translateY(-1px);box-shadow:0 4px 16px rgba(45,90,39,0.25);}
+  .btn-primary:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text);}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-row{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}
+
+  .ai-btn{background:linear-gradient(135deg,#1a1915 0%,#2d5a27 100%);color:white;padding:13px 28px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.92rem;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;gap:8px;transition:all 0.2s;}
+  .ai-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+  .ai-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+  /* SUMMARY */
+  .summary-box{background:#f9f8f5;border:1px solid var(--border);border-radius:12px;padding:24px;margin-top:20px;font-size:0.9rem;line-height:1.75;white-space:pre-wrap;color:var(--text);min-height:120px;}
+  .summary-box.loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-style:italic;}
+
+  .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* COST TABLE */
+  .cost-table{width:100%;border-collapse:collapse;margin-top:12px;}
+  .cost-table tr{border-bottom:1px solid var(--border);}
+  .cost-table tr:last-child{border-bottom:none;}
+  .cost-table td{padding:10px 4px;font-size:0.88rem;}
+  .cost-table td:last-child{text-align:right;font-weight:600;}
+  .cost-table .total td{font-family:'DM Serif Display',serif;font-size:1rem;padding-top:14px;color:var(--accent);}
+
+  /* ALERT */
+  .alert{border-radius:10px;padding:12px 16px;font-size:0.85rem;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;}
+  .alert-error{background:var(--error-light);border:1px solid #f5c6c2;color:var(--error);}
+  .alert-success{background:var(--accent-light);border:1px solid #c3dbbf;color:var(--accent);}
+  .alert-icon{flex-shrink:0;font-size:1rem;margin-top:1px;}
+
+  .hidden{display:none!important;}
+
+  /* DECOR PREVIEW BADGE */
+  .decor-badge{display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent);font-size:0.78rem;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:16px;}
+
+  @media(max-width:600px){
+    .form-row{grid-template-columns:1fr;}
+    .event-grid{grid-template-columns:1fr 1fr;}
+    .venue-grid{grid-template-columns:1fr 1fr;}
+    .decor-grid{grid-template-columns:1fr 1fr;}
+    header{padding:12px 16px;}
+    main{padding:24px 14px 60px;}
+    .steps{gap:4px;}
+    .step{padding-right:14px;}
+  }
+  @media print{
+    header,.steps,.btn-row,.ai-btn,#qrModalOverlay{display:none;}
+    .card{box-shadow:none;border:1px solid #ccc;}
+  }
+</style>
+</head>
+<body>
+
+<!-- QR MODAL -->
+<div class="modal-overlay" id="qrModalOverlay" onclick="closeQR(event)">
+  <div class="modal">
+    <h2>📲 Scan to Open</h2>
+    <p>Share Eventify AI with anyone — scan this QR code to open the planner instantly on any device.</p>
+    <div id="qrcode"></div>
+    <div class="modal-url" id="qrUrl"></div>
+    <button class="modal-close" onclick="closeQRBtn()">Close</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo-mark">✦</div>
+  <div>
+    <div class="logo-text">Eventify AI</div>
+    <div class="logo-sub">Smart Event Planner</div>
+  </div>
+  <div class="hdr-right">
+    <span class="tag">✦ Powered by Claude AI</span>
+    <button class="qr-btn" onclick="openQR()">📲 QR Code</button>
+  </div>
+</header>
+
+<main>
+  <h1>Plan Your Perfect Event</h1>
+  <p class="subtitle">Tell us what you need — Eventify AI handles the rest, smartly.</p>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="stp1"><span class="step-num">1</span> Event Type</div>
+    <div class="step" id="stp2"><span class="step-num">2</span> Details</div>
+    <div class="step" id="stp3"><span class="step-num">3</span> Decoration</div>
+    <div class="step" id="stp4"><span class="step-num">4</span> Venue</div>
+    <div class="step" id="stp5"><span class="step-num">5</span> Summary</div>
+  </div>
+
+  <!-- PAGE 1: EVENT TYPE -->
+  <div id="page1">
+    <div class="card">
+      <div class="card-title"><span class="icon">🎯</span> Choose Your Event Type</div>
+      <div class="event-grid">
+        <div class="event-card" data-type="Wedding" onclick="selectEvent(this)">
+          <span class="ev-icon">💍</span>
+          <div><div class="ev-name">Wedding</div><div class="ev-desc">Ceremony & reception planning</div></div>
+        </div>
+        <div class="event-card" data-type="Birthday Party" onclick="selectEvent(this)">
+          <span class="ev-icon">🎂</span>
+          <div><div class="ev-name">Birthday Party</div><div class="ev-desc">Milestone celebrations</div></div>
+        </div>
+        <div class="event-card" data-type="Corporate Event" onclick="selectEvent(this)">
+          <span class="ev-icon">🏢</span>
+          <div><div class="ev-name">Corporate Event</div><div class="ev-desc">Team events & galas</div></div>
+        </div>
+        <div class="event-card" data-type="Conference/Seminar" onclick="selectEvent(this)">
+          <span class="ev-icon">🎤</span>
+          <div><div class="ev-name">Conference / Seminar</div><div class="ev-desc">Knowledge & networking</div></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn1next" disabled onclick="goTo(2)">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: DETAILS -->
+  <div id="page2" class="hidden">
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> Event Details</div>
+      <div id="alerts2"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Event Name *</label>
+          <input type="text" id="evName" placeholder="e.g. Priya & Arjun Wedding"/>
+          <span class="err-msg hidden" id="err-evName">Please enter event name</span>
+        </div>
+        <div class="form-group">
+          <label>Event Date *</label>
+          <input type="date" id="evDate"/>
+          <span class="err-msg hidden" id="err-evDate">Select a valid future date</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Time *</label>
+          <input type="time" id="evStart"/>
+          <span class="err-msg hidden" id="err-evStart">Required</span>
+        </div>
+        <div class="form-group">
+          <label>End Time *</label>
+          <input type="time" id="evEnd"/>
+          <span class="err-msg hidden" id="err-evEnd">Must be after start time</span>
+        </div>
+      </div>
+
+      <!-- AUTO LOCATION -->
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>📍 City / Location *</label>
+          <div class="loc-row">
+            <input type="text" id="evCity" placeholder="e.g. Chennai, Tamil Nadu"/>
+            <button class="loc-detect-btn" id="locBtn" onclick="detectLocation()">
+              <span id="locBtnIcon">📍</span> Auto-Detect
+            </button>
+          </div>
+          <span class="loc-status hidden" id="locStatus"></span>
+          <span class="err-msg hidden" id="err-evCity">Please enter city</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Budget per person (₹) *</label>
+          <input type="number" id="evBudget" placeholder="e.g. 2500" min="100"/>
+          <span class="err-msg hidden" id="err-evBudget">Enter valid amount (min ₹100)</span>
+        </div>
+        <div class="form-group">
+          <label>Number of Guests *</label>
+          <div class="range-wrap">
+            <input type="range" id="evGuests" min="10" max="1000" value="100" step="5" oninput="updateGuests()"/>
+            <span class="range-val" id="guestVal">100</span>
+          </div>
+          <span class="err-msg hidden" id="err-evGuests">Min 10 guests required</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Special Requirements</label>
+        <textarea id="evNotes" placeholder="E.g. vegetarian food, wheelchair access, live music..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goTo(1)">← Back</button>
+        <button class="btn btn-primary" onclick="validateAndNext()">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 3: DECORATION -->
+  <div id="page3" class="hidden">
+    <div class="card">
+      <div class="card-title"><span class="icon">🌸</span> Choose Decoration Style</div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Pick a theme that matches your <strong id="decorEventLabel"></strong> vibe. Our AI will include detailed decoration tips in your plan.</p>
+      <div class="decor-grid" id="decorGrid"></div>
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-outline" onclick="goTo(2)">← Back</button>
+        <button class="btn btn-primary" id="btn3next" disabled onclick="goTo(4)">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 4: VENUE -->
+  <div id="page4" class="hidden">
+    <div class="card">
+      <div class="card-title"><span class="icon">🏛️</span> Suggested Venues</div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Based on your guest count and budget, here are recommended halls in <strong id="cityLabel"></strong>:</p>
+      <div class="venue-grid" id="venueGrid"></div>
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-outline" onclick="goTo(3)">← Back</button>
+        <button class="btn btn-primary" id="btn4next" disabled onclick="goTo(5)">Generate Summary →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 5: AI SUMMARY -->
+  <div id="page5" class="hidden">
+    <div class="card">
+      <div class="card-title"><span class="icon">✨</span> AI Event Summary</div>
+      <div id="decorBadge" class="decor-badge hidden"></div>
+      <div style="margin-top:4px">
+        <button class="ai-btn" id="aiGenBtn" onclick="generateSummary()"><span>✦</span> Generate Full Plan with AI</button>
+      </div>
+      <div class="summary-box hidden" id="summaryBox"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">💰</span> Cost Breakdown</div>
+      <table class="cost-table" id="costTable"></table>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="goTo(4)">← Back</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save</button>
+      <button class="btn btn-primary" onclick="resetAll()">Plan Another Event</button>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const VENUES = {
+  "Wedding":[
+    {name:"Grand Palace Banquet",cap:500,pricePerHead:1800,feature:"Outdoor lawn + AC hall"},
+    {name:"Royal Garden Hall",cap:800,pricePerHead:2200,feature:"Beachfront view"},
+    {name:"The Heritage Mahal",cap:1000,pricePerHead:2800,feature:"Heritage architecture"},
+  ],
+  "Birthday Party":[
+    {name:"Celebration Lounge",cap:150,pricePerHead:900,feature:"DJ + dance floor"},
+    {name:"Sky Terrace Club",cap:300,pricePerHead:1200,feature:"Rooftop open-air"},
+    {name:"Fun Zone Party Hall",cap:200,pricePerHead:700,feature:"Kids-friendly"},
+  ],
+  "Corporate Event":[
+    {name:"The Executive Centre",cap:400,pricePerHead:1500,feature:"AV + conference setup"},
+    {name:"City Business Hub",cap:600,pricePerHead:1800,feature:"Multiple breakout rooms"},
+    {name:"Metro Convention Hall",cap:1000,pricePerHead:2100,feature:"Simultaneous interpretation"},
+  ],
+  "Conference/Seminar":[
+    {name:"Knowledge Park Auditorium",cap:700,pricePerHead:1100,feature:"Theater seating + mics"},
+    {name:"Smart Summit Venue",cap:400,pricePerHead:900,feature:"High-speed wifi + projectors"},
+    {name:"Pinnacle Convention Centre",cap:1200,pricePerHead:1600,feature:"Stage + green room"},
+  ],
+};
+
+const DECORATIONS = {
+  "Wedding":[
+    {icon:"🌹",name:"Classic Romance",desc:"Red roses, candles, drapes & gold accents",cost:120000,id:"classic_romance"},
+    {icon:"🌿",name:"Garden Rustic",desc:"Greenery, wood, wildflowers & fairy lights",cost:85000,id:"garden_rustic"},
+    {icon:"👑",name:"Royal Grandeur",desc:"Crystal chandeliers, velvet & opulent florals",cost:200000,id:"royal_grandeur"},
+    {icon:"🤍",name:"Minimalist White",desc:"White drapes, soft lighting, clean lines",cost:65000,id:"minimalist_white"},
+    {icon:"🦋",name:"Boho Chic",desc:"Macramé, pampas grass, earthy tones",cost:75000,id:"boho_chic"},
+    {icon:"✨",name:"Glam Luxury",desc:"Gold, sequins, mirror walls & statement florals",cost:175000,id:"glam_luxury"},
+  ],
+  "Birthday Party":[
+    {icon:"🎈",name:"Balloon Blast",desc:"Balloon arches, photo walls & confetti drops",cost:25000,id:"balloon_blast"},
+    {icon:"🎠",name:"Fairy Tale",desc:"Princess/prince theme, pastel colors & drapes",cost:40000,id:"fairy_tale"},
+    {icon:"🌙",name:"Midnight Glow",desc:"Neon lights, glow décor & dark ambiance",cost:35000,id:"midnight_glow"},
+    {icon:"🎊",name:"Tropical Fiesta",desc:"Bright colors, palm leaves & exotic flowers",cost:30000,id:"tropical_fiesta"},
+    {icon:"🌟",name:"Celestial Star",desc:"Stars, moon motifs, silver & deep blue",cost:45000,id:"celestial_star"},
+    {icon:"🎪",name:"Vintage Carnival",desc:"Retro posters, string lights & fun booths",cost:38000,id:"vintage_carnival"},
+  ],
+  "Corporate Event":[
+    {icon:"🖤",name:"Sleek Monochrome",desc:"Black, white & grey with branded elements",cost:55000,id:"sleek_mono"},
+    {icon:"🌐",name:"Tech Futuristic",desc:"LED panels, digital displays & neon accents",cost:80000,id:"tech_future"},
+    {icon:"🌿",name:"Biophilic Green",desc:"Living walls, plants & natural materials",cost:50000,id:"biophilic"},
+    {icon:"🏆",name:"Award Gala",desc:"Red carpet, spotlights & luxe table settings",cost:90000,id:"award_gala"},
+  ],
+  "Conference/Seminar":[
+    {icon:"📐",name:"Clean Professional",desc:"Simple banners, branded backdrops, neat tables",cost:20000,id:"clean_pro"},
+    {icon:"💡",name:"Innovation Hub",desc:"Whiteboards, idea walls & collaborative setups",cost:30000,id:"innovation"},
+    {icon:"🌱",name:"Eco Minimal",desc:"Sustainable materials, plants & muted tones",cost:18000,id:"eco_minimal"},
+    {icon:"🎓",name:"Academic Classic",desc:"Formal layout, rich wood tones & podium set",cost:25000,id:"academic"},
+  ],
+};
+
+let state={eventType:null,name:'',date:'',start:'',end:'',city:'',budget:0,guests:100,notes:'',decor:null,venue:null};
+
+// ── EVENT TYPE ─────────────────────────────────────────────────────────────────
+function selectEvent(el){
+  document.querySelectorAll('.event-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.eventType=el.dataset.type;
+  document.getElementById('btn1next').disabled=false;
+}
+
+function updateGuests(){
+  const v=document.getElementById('evGuests').value;
+  document.getElementById('guestVal').textContent=v;
+  state.guests=parseInt(v);
+}
+
+// ── AUTO LOCATION ─────────────────────────────────────────────────────────────
+async function detectLocation(){
+  const btn=document.getElementById('locBtn');
+  const icon=document.getElementById('locBtnIcon');
+  const status=document.getElementById('locStatus');
+  if(!navigator.geolocation){
+    status.textContent='⚠️ Geolocation not supported in this browser.';
+    status.className='loc-status fail'; status.classList.remove('hidden'); return;
+  }
+  btn.disabled=true; icon.textContent='⏳';
+  status.textContent='Detecting your location...';
+  status.className='loc-status ok'; status.classList.remove('hidden');
+
+  navigator.geolocation.getCurrentPosition(
+    async(pos)=>{
+      try{
+        const {latitude:lat,longitude:lon}=pos.coords;
+        const res=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        const data=await res.json();
+        const addr=data.address;
+        const city=addr.city||addr.town||addr.village||addr.county||'';
+        const state_name=addr.state||'';
+        const country=addr.country||'';
+        const full=[city,state_name,country].filter(Boolean).join(', ');
+        document.getElementById('evCity').value=full;
+        status.textContent=`✅ Location detected: ${full}`;
+        status.className='loc-status ok';
+      }catch(e){
+        status.textContent='⚠️ Could not fetch city name. Please type manually.';
+        status.className='loc-status fail';
+      }
+      btn.disabled=false; icon.textContent='📍';
+    },
+    (err)=>{
+      let msg='⚠️ Location access denied. Please type manually.';
+      if(err.code===err.TIMEOUT) msg='⚠️ Location timed out. Please type manually.';
+      status.textContent=msg; status.className='loc-status fail';
+      btn.disabled=false; icon.textContent='📍';
+    },
+    {timeout:10000}
+  );
+}
+
+// ── VALIDATION ────────────────────────────────────────────────────────────────
+function clearErr(id){document.getElementById(id).classList.add('hidden');const el=document.getElementById(id.replace('err-',''));if(el)el.classList.remove('error');}
+function showErr(id){document.getElementById(id).classList.remove('hidden');const el=document.getElementById(id.replace('err-',''));if(el)el.classList.add('error');}
+
+function validateAndNext(){
+  let ok=true;
+  const v=(id)=>document.getElementById(id).value.trim();
+  const today=new Date();today.setHours(0,0,0,0);
+  ['evName','evCity'].forEach(id=>{if(!v(id)){showErr('err-'+id);ok=false;}else clearErr('err-'+id);});
+  const dt=v('evDate');
+  if(!dt||new Date(dt)<today){showErr('err-evDate');ok=false;}else clearErr('err-evDate');
+  const st=v('evStart'),en=v('evEnd');
+  if(!st){showErr('err-evStart');ok=false;}else clearErr('err-evStart');
+  if(!en||en<=st){showErr('err-evEnd');ok=false;}else clearErr('err-evEnd');
+  const budget=parseFloat(document.getElementById('evBudget').value);
+  if(!budget||budget<100){showErr('err-evBudget');ok=false;}else clearErr('err-evBudget');
+  const guests=parseInt(document.getElementById('evGuests').value);
+  if(!guests||guests<10){showErr('err-evGuests');ok=false;}else clearErr('err-evGuests');
+
+  if(ok){
+    state.name=v('evName');state.date=dt;state.start=st;state.end=en;
+    state.city=v('evCity');state.budget=budget;state.guests=guests;
+    state.notes=document.getElementById('evNotes').value.trim();
+    document.getElementById('alerts2').innerHTML='';
+    goTo(3);
+  }else{
+    document.getElementById('alerts2').innerHTML=`<div class="alert alert-error"><span class="alert-icon">⚠️</span>Please fix the highlighted fields before continuing.</div>`;
+  }
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function goTo(page){
+  [1,2,3,4,5].forEach(p=>{document.getElementById('page'+p).classList.add('hidden');});
+  document.getElementById('page'+page).classList.remove('hidden');
+  [1,2,3,4,5].forEach(p=>{
+    const s=document.getElementById('stp'+p);
+    s.classList.remove('active','done');
+    if(p<page) s.classList.add('done');
+    if(p===page) s.classList.add('active');
+  });
+  if(page===3) buildDecorGrid();
+  if(page===4) buildVenueGrid();
+  if(page===5) buildCostTable();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── DECORATION GRID ───────────────────────────────────────────────────────────
+function buildDecorGrid(){
+  document.getElementById('decorEventLabel').textContent=state.eventType||'event';
+  const decors=DECORATIONS[state.eventType]||[];
+  const grid=document.getElementById('decorGrid');
+  grid.innerHTML='';
+  decors.forEach(d=>{
+    const card=document.createElement('div');
+    card.className='decor-card';
+    if(state.decor&&state.decor.id===d.id) card.classList.add('selected');
+    card.innerHTML=`
+      <div class="dc-icon">${d.icon}</div>
+      <div class="dc-name">${d.name}</div>
+      <div class="dc-desc">${d.desc}</div>
+      <div class="dc-price">~₹${d.cost.toLocaleString('en-IN')}</div>
+    `;
+    card.onclick=()=>{
+      document.querySelectorAll('.decor-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.decor=d;
+      document.getElementById('btn3next').disabled=false;
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ── VENUE GRID ────────────────────────────────────────────────────────────────
+function buildVenueGrid(){
+  document.getElementById('cityLabel').textContent=state.city||'your city';
+  const venues=VENUES[state.eventType]||[];
+  const grid=document.getElementById('venueGrid');
+  grid.innerHTML='';
+  venues.forEach(v=>{
+    const fits=state.guests<=v.cap;
+    const chip=document.createElement('div');
+    chip.className='venue-chip';
+    chip.style.opacity=fits?'1':'0.55';
+    chip.title=fits?'':'Capacity may be insufficient for your guest count';
+    chip.innerHTML=`
+      <div class="vc-name">${v.name}</div>
+      <div class="vc-cap">Capacity: ${v.cap} guests${!fits?' ⚠️':''}</div>
+      <div class="vc-price">₹${v.pricePerHead.toLocaleString('en-IN')}/person</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">${v.feature}</div>
+    `;
+    chip.onclick=()=>{
+      document.querySelectorAll('.venue-chip').forEach(c=>c.classList.remove('selected'));
+      chip.classList.add('selected');
+      state.venue=v;
+      document.getElementById('btn4next').disabled=false;
+    };
+    grid.appendChild(chip);
+  });
+}
+
+// ── COST TABLE ────────────────────────────────────────────────────────────────
+function buildCostTable(){
+  if(!state.venue) return;
+  const v=state.venue;
+  const venueCost=v.pricePerHead*state.guests;
+  const cateringCost=state.budget*state.guests*0.4;
+  const decorCost=state.decor?state.decor.cost:state.budget*state.guests*0.2;
+  const miscCost=state.budget*state.guests*0.1;
+  const total=venueCost+cateringCost+decorCost+miscCost;
+
+  // Show decor badge on summary page
+  if(state.decor){
+    const badge=document.getElementById('decorBadge');
+    badge.innerHTML=`${state.decor.icon} Decoration: ${state.decor.name}`;
+    badge.classList.remove('hidden');
+  }
+
+  document.getElementById('costTable').innerHTML=`
+    <tr><td>🏛️ Venue — ${v.name}</td><td>₹${venueCost.toLocaleString('en-IN')}</td></tr>
+    <tr><td>🍽️ Catering (${state.guests} guests)</td><td>₹${Math.round(cateringCost).toLocaleString('en-IN')}</td></tr>
+    <tr><td>${state.decor?state.decor.icon:'🌸'} Decoration — ${state.decor?state.decor.name:'Custom'}</td><td>₹${Math.round(decorCost).toLocaleString('en-IN')}</td></tr>
+    <tr><td>📦 Miscellaneous & Contingency</td><td>₹${Math.round(miscCost).toLocaleString('en-IN')}</td></tr>
+    <tr class="total"><td>Total Estimated Cost</td><td>₹${Math.round(total).toLocaleString('en-IN')}</td></tr>
+  `;
+}
+
+// ── AI SUMMARY ────────────────────────────────────────────────────────────────
+async function generateSummary(){
+  const btn=document.getElementById('aiGenBtn');
+  const box=document.getElementById('summaryBox');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Generating...';
+  box.classList.remove('hidden');
+  box.className='summary-box loading';
+  box.innerHTML='<div class="spinner"></div> Eventify AI is crafting your event plan...';
+
+  const venueCost=state.venue?state.venue.pricePerHead*state.guests:0;
+  const decorCost=state.decor?state.decor.cost:0;
+  const total=Math.round(state.budget*state.guests+venueCost+decorCost);
+
+  const prompt=`You are Eventify AI, an expert event planner. Generate a warm, professional, and detailed event plan for:
+
+Event Type: ${state.eventType}
+Event Name: ${state.name}
+Date: ${state.date}
+Time: ${state.start} – ${state.end}
+City: ${state.city}
+Guests: ${state.guests}
+Budget per person: ₹${state.budget}
+Selected Venue: ${state.venue?.name||'TBD'} (Capacity: ${state.venue?.cap}, Features: ${state.venue?.feature})
+Decoration Style: ${state.decor?`${state.decor.icon} ${state.decor.name} — ${state.decor.desc}`:'Not selected'}
+Special Requirements: ${state.notes||'None'}
+Total Estimated Cost: ₹${total.toLocaleString('en-IN')}
+
+Provide a structured event plan with these sections:
+1. ✨ Overview & Vision
+2. 📅 Day-of Timeline & Schedule
+3. 🏛️ Venue Setup Notes
+4. 🌸 Decoration Plan (give detailed ideas specific to the chosen decoration style — colors, materials, focal points, lighting, table setup, entrance design)
+5. 🍽️ Catering Recommendations
+6. 🎯 Special Features for this event type
+7. ⚠️ Risk Safeguards & Backup Plans (weather, vendor issues, power, no-shows)
+8. ✅ Final Pre-Event Checklist (top 8 must-dos)
+
+Keep it warm, specific, actionable and under 500 words. Use emojis as section headers.`;
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:1000,
+        messages:[{role:"user",content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.map(b=>b.text||'').join('')||'Unable to generate summary.';
+    box.className='summary-box';
+    box.textContent=text;
+  }catch(e){
+    box.className='summary-box';
+    box.textContent='⚠️ Could not connect to AI. Please check your connection and try again.';
+  }
+  btn.disabled=false;
+  btn.innerHTML='<span>✦</span> Regenerate';
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function resetAll(){
+  state={eventType:null,name:'',date:'',start:'',end:'',city:'',budget:0,guests:100,notes:'',decor:null,venue:null};
+  document.querySelectorAll('.event-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('btn1next').disabled=true;
+  document.getElementById('summaryBox').classList.add('hidden');
+  document.getElementById('decorBadge').classList.add('hidden');
+  document.getElementById('aiGenBtn').disabled=false;
+  document.getElementById('aiGenBtn').innerHTML='<span>✦</span> Generate Full Plan with AI';
+  document.getElementById('evGuests').value=100;
+  document.getElementById('guestVal').textContent=100;
+  document.getElementById('locStatus').classList.add('hidden');
+  goTo(1);
+}
+
+// ── QR CODE ───────────────────────────────────────────────────────────────────
+let qrGenerated=false;
+function openQR(){
+  document.getElementById('qrModalOverlay').classList.add('open');
+  if(!qrGenerated){
+    const url=window.location.href;
+    document.getElementById('qrUrl').textContent=url;
+    new QRCode(document.getElementById('qrcode'),{
+      text:url,
+      width:200,height:200,
+      colorDark:"#1a1915",
+      colorLight:"#ffffff",
+      correctLevel:QRCode.CorrectLevel.M
+    });
+    qrGenerated=true;
+  }
+}
+function closeQR(e){if(e.target===document.getElementById('qrModalOverlay')) closeQRBtn();}
+function closeQRBtn(){document.getElementById('qrModalOverlay').classList.remove('open');}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.getElementById('evDate').min=new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
